@@ -1,0 +1,757 @@
+#Load the dataset
+import os
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+# Define paths
+data_dir = r"E:\SDP\TB_Chest_Radiography_Database"
+normal_dir = os.path.join(data_dir, "Normal")
+tb_dir = os.path.join(data_dir, "Tuberculosis")
+
+#Data analysis
+import os
+import matplotlib.pyplot as plt
+
+# Define paths
+data_dir = r"E:\SDP\TB_Chest_Radiography_Database"
+normal_dir = os.path.join(data_dir, "Normal")
+tb_dir = os.path.join(data_dir, "Tuberculosis")
+
+# Count the number of images in each class
+normal_count = len(os.listdir(normal_dir))
+tb_count = len(os.listdir(tb_dir))
+
+# Print the counts
+print(f"Number of Normal images: {normal_count}")
+print(f"Number of Tuberculosis images: {tb_count}")
+
+# Plot the class distribution
+classes = ['Normal', 'Tuberculosis']
+counts = [normal_count, tb_count]
+
+plt.figure(figsize=(8, 6))
+plt.bar(classes, counts, color=['blue', 'orange'])
+plt.title('Class Distribution', fontsize=16)
+plt.ylabel('Number of Images', fontsize=14)
+plt.xlabel('Class', fontsize=14)
+plt.xticks(fontsize=12)
+plt.yticks(fontsize=12)
+for i, count in enumerate(counts):
+    plt.text(i, count + 50, str(count), ha='center', fontsize=12)  # Add count labels on top of bars
+plt.tight_layout()
+plt.show()
+plt.close()
+#Visualize sample Images
+import os
+import matplotlib.pyplot as plt
+from tensorflow.keras.preprocessing.image import load_img
+import numpy as np
+# Define paths
+data_dir = r"E:\SDP\TB_Chest_Radiography_Database"
+normal_dir = os.path.join(data_dir, "Normal")
+tb_dir = os.path.join(data_dir, "Tuberculosis")
+
+# Function to plot sample images
+def plot_sample_images(class_dir, class_name, num_samples=6):
+    """
+    Visualize random sample images from a specific class.
+    :param class_dir: Path to the directory containing images of a specific class
+    :param class_name: Name of the class (e.g., 'Normal' or 'Tuberculosis')
+    :param num_samples: Number of random samples to display
+    """
+    # Get a list of all image filenames in the directory
+    image_files = os.listdir(class_dir)
+    
+    # Create a figure for visualization
+    plt.figure(figsize=(15, 7))
+    for i in range(num_samples):
+        # Randomly select an image
+        img_file = np.random.choice(image_files)
+        img_path = os.path.join(class_dir, img_file)
+        
+        # Load and display the image
+        img = load_img(img_path, color_mode='grayscale')  # Load as grayscale
+        plt.subplot(2, num_samples // 2, i + 1)
+        plt.imshow(img, cmap='gray')
+        plt.title(f"Class: {class_name}", fontsize=14)
+        plt.axis('off')  # Turn off axis
+    plt.suptitle(f"Sample Images from {class_name} Class", fontsize=18)
+    plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust layout to fit title
+    plt.show()
+
+# Visualize sample images from the Normal class
+print("Visualizing sample images from the Normal class:")
+plot_sample_images(normal_dir, "Normal")
+
+# Visualize sample images from the Tuberculosis class
+print("Visualizing sample images from the Tuberculosis class:")
+plot_sample_images(tb_dir, "Tuberculosis")
+
+#Data Augmentation
+import os
+import numpy as np
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array, save_img
+
+# Define paths
+data_dir = r"E:\SDP\TB_Chest_Radiography_Database"
+tb_dir = os.path.join(data_dir, "Tuberculosis")
+augmented_tb_dir = os.path.join(data_dir, "Augmented_Tuberculosis")
+
+# Create output directory for augmented Tuberculosis images
+os.makedirs(augmented_tb_dir, exist_ok=True)
+
+# Data augmentation configuration
+datagen = ImageDataGenerator(
+    rotation_range=15,       # Randomly rotate images by up to 15 degrees
+    width_shift_range=0.1,   # Randomly shift images horizontally by 10%
+    height_shift_range=0.1,  # Randomly shift images vertically by 10%
+    shear_range=0.1,         # Shear transformation
+    zoom_range=0.1,          # Randomly zoom in on images by 10%
+    horizontal_flip=True,    # Randomly flip images horizontally
+    fill_mode='nearest'      # Fill missing pixels after transformations
+)
+
+# Function to augment Tuberculosis images
+def augment_tuberculosis_images(input_dir, output_dir, target_count=3500):
+    # Load all Tuberculosis images
+    tb_images = [img_file for img_file in os.listdir(input_dir)]
+    original_count = len(tb_images)
+    print(f"Original Tuberculosis image count: {original_count}")
+    
+    # Calculate how many augmentations are needed
+    augmentations_per_image = int(np.ceil((target_count - original_count) / original_count))
+    print(f"Augmentations per image required: {augmentations_per_image}")
+    
+    # Generate augmented images
+    augmented_count = 0
+    for img_file in tb_images:
+        img_path = os.path.join(input_dir, img_file)
+        try:
+            # Load image without resizing
+            img = load_img(img_path, color_mode='grayscale')
+            img_array = img_to_array(img)  # Convert to numpy array (shape: H x W x 1)
+            
+            # Add batch dimension for augmentation
+            img_array = np.expand_dims(img_array, axis=0)  # Shape: (1, H, W, 1)
+            
+            # Generate augmented images
+            for i in range(augmentations_per_image):
+                if augmented_count >= target_count - original_count:
+                    break  # Stop if target count is reached
+                
+                # Apply augmentation
+                augmented_img = datagen.flow(img_array, batch_size=1)[0]  # Shape: (H, W, 1)
+                
+                # Remove batch dimension if necessary
+                if len(augmented_img.shape) == 4:  # Check if batch dimension exists
+                    augmented_img = augmented_img[0]  # Shape: (H, W, 1)
+                
+                # Save augmented image
+                base_name, ext = os.path.splitext(img_file)
+                output_file = f"{base_name}_aug{i}{ext}"
+                output_path = os.path.join(output_dir, output_file)
+                save_img(output_path, augmented_img, scale=False, color_mode='grayscale')
+                
+                augmented_count += 1
+        
+        except Exception as e:
+            print(f"Error processing {img_path}: {e}")
+    
+    # Copy original Tuberculosis images to the augmented directory
+    for img_file in tb_images:
+        src_path = os.path.join(input_dir, img_file)
+        dst_path = os.path.join(output_dir, img_file)
+        if not os.path.exists(dst_path):
+            os.link(src_path, dst_path)  # Create a hard link to avoid duplicating data
+    
+    print(f"Total augmented Tuberculosis images: {len(os.listdir(output_dir))}")
+
+# Augment Tuberculosis images
+print("Augmenting Tuberculosis images...")
+augment_tuberculosis_images(tb_dir, augmented_tb_dir, target_count=3500)
+
+#splitting dataset into train, validation and test.
+import os
+import numpy as np
+from sklearn.model_selection import train_test_split
+import shutil
+
+# Define paths
+data_dir = r"E:\SDP\TB_Chest_Radiography_Database"
+normal_dir = os.path.join(data_dir, "Normal")
+tb_dir = os.path.join(data_dir, "Augmented_Tuberculosis")
+
+# Define the output directory for split data
+split_data_dir = r"E:\SDP\Split data1"
+os.makedirs(split_data_dir, exist_ok=True)
+
+# Create subdirectories for training, validation, and test sets
+train_dir = os.path.join(split_data_dir, "train1")
+val_dir = os.path.join(split_data_dir, "val1")
+test_dir = os.path.join(split_data_dir, "test1")
+
+for directory in [train_dir, val_dir, test_dir]:
+    os.makedirs(os.path.join(directory, "Normal"), exist_ok=True)
+    os.makedirs(os.path.join(directory, "Augmented_Tuberculosis"), exist_ok=True)
+
+# Load filenames and labels
+normal_images = [os.path.join(normal_dir, img) for img in os.listdir(normal_dir)]
+tb_images = [os.path.join(tb_dir, img) for img in os.listdir(tb_dir)]
+
+# Create labels: 0 for Normal, 1 for Tuberculosis
+normal_labels = [0] * len(normal_images)
+tb_labels = [1] * len(tb_images)
+
+# Combine all images and labels
+all_images = normal_images + tb_images
+all_labels = normal_labels + tb_labels
+
+# Convert to numpy arrays for easier handling
+all_images = np.array(all_images)
+all_labels = np.array(all_labels)
+
+# Split into training (70%), validation (15%), and test (15%) sets
+X_train, X_temp, y_train, y_temp = train_test_split(
+    all_images, all_labels, test_size=0.3, random_state=42, stratify=all_labels
+)
+X_val, X_test, y_val, y_test = train_test_split(
+    X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp
+)
+
+# Print the sizes of each set
+print(f"Training set size: {len(X_train)} ({len(y_train)} labels)")
+print(f"Validation set size: {len(X_val)} ({len(y_val)} labels)")
+print(f"Test set size: {len(X_test)} ({len(y_test)} labels)")
+
+# Optional: Verify class distribution in each set
+def print_class_distribution(labels, set_name):
+    unique, counts = np.unique(labels, return_counts=True)
+    print(f"{set_name} Class Distribution: {dict(zip(unique, counts))}")
+
+print_class_distribution(y_train, "Training Set")
+print_class_distribution(y_val, "Validation Set")
+print_class_distribution(y_test, "Test Set")
+
+# Function to copy files to the destination directory
+def copy_files(file_paths, labels, dest_dir):
+    for file_path, label in zip(file_paths, labels):
+        
+        class_name = "Normal" if label == 0 else "Augmented_Tuberculosis"
+        dest_path = os.path.join(dest_dir, class_name, os.path.basename(file_path))
+        
+        # Ensure the destination directory exists
+        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+        
+        # Copy the file
+        shutil.copy(file_path, dest_path)
+
+# Copy files to their respective directories
+print("Copying training set...")
+copy_files(X_train, y_train, train_dir)
+
+print("Copying validation set...")
+copy_files(X_val, y_val, val_dir)
+
+print("Copying test set...")
+copy_files(X_test, y_test, test_dir)
+
+print("Dataset splitting and saving completed successfully!")
+
+#Extracting features using DenseNet121.
+import os
+import numpy as np
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.applications import DenseNet121
+from tqdm import tqdm
+# ------------------------------
+# STEP 1: DATA PREPARATION
+# ------------------------------
+
+# Define paths
+split_data_dir = r"E:\SDP\Split data1"
+train_dir = os.path.join(split_data_dir, "train1")
+val_dir = os.path.join(split_data_dir, "val1")
+test_dir = os.path.join(split_data_dir, "test1")
+
+# Output directory for extracted features
+features_dir = r"E:\SDP\Extracted_Features"
+os.makedirs(features_dir, exist_ok=True)
+
+# Data augmentation and preprocessing
+datagen = ImageDataGenerator(rescale=1.0 / 255)
+
+# Generators for training, validation, and testing
+def create_generator(directory):
+    return datagen.flow_from_directory(
+        directory,
+        target_size=(224, 224),  # DenseNet121 input size
+        batch_size=32,
+        class_mode="binary",
+        color_mode="rgb",
+        shuffle=False,  # Keep data order for feature extraction
+    )
+
+train_generator = create_generator(train_dir)
+val_generator = create_generator(val_dir)
+test_generator = create_generator(test_dir)
+# ------------------------------
+# STEP 2: LOAD DENSENET121 FOR FEATURE EXTRACTION
+# ------------------------------
+
+# Load DenseNet121 with pretrained weights
+base_model = DenseNet121(weights="imagenet", include_top=False, pooling="avg")
+print("DenseNet121 loaded successfully.")
+
+# Function to extract features
+def extract_features(generator, model):
+    features = []
+    labels = []
+    num_batches = len(generator)  # Number of batches in the generator
+    for i in tqdm(range(num_batches), desc=f"Extracting features from {generator.directory}"):
+        batch_images, batch_labels = generator[i]  # Get the next batch
+        batch_features = model.predict(batch_images, verbose=0)  # Predict features
+        features.append(batch_features)
+        labels.append(batch_labels)
+    return np.vstack(features), np.concatenate(labels)
+
+# Extract features for train, validation, and test sets
+X_train_caps, y_train_caps = extract_features(train_generator, base_model)
+X_val_caps, y_val_caps = extract_features(val_generator, base_model)
+X_test_caps, y_test_caps = extract_features(test_generator, base_model)
+
+# Save extracted features
+np.save(os.path.join(features_dir, "X_train_caps.npy"), X_train_caps)
+np.save(os.path.join(features_dir, "y_train_caps.npy"), y_train_caps)
+np.save(os.path.join(features_dir, "X_val_caps.npy"), X_val_caps)
+np.save(os.path.join(features_dir, "y_val_caps.npy"), y_val_caps)
+np.save(os.path.join(features_dir, "X_test_caps.npy"), X_test_caps)
+np.save(os.path.join(features_dir, "y_test_caps.npy"), y_test_caps)
+
+print("Feature extraction completed successfully!")
+
+#Loading data required and training two classifiers.
+import numpy as np
+import os
+# Define the directory where features are saved
+features_dir = r"E:\SDP\Extracted_Features"
+
+# Load training features and labels
+X_train_caps = np.load(os.path.join(features_dir, "X_train_caps.npy"))
+y_train_caps = np.load(os.path.join(features_dir, "y_train_caps.npy"))
+
+# Load validation features and labels
+X_val_caps = np.load(os.path.join(features_dir, "X_val_caps.npy"))
+y_val_caps = np.load(os.path.join(features_dir, "y_val_caps.npy"))
+
+# Load test features and labels
+X_test_caps = np.load(os.path.join(features_dir, "X_test_caps.npy"))
+y_test_caps = np.load(os.path.join(features_dir, "y_test_caps.npy"))
+
+# Convert labels to categorical (one-hot encoding) for CapsNet
+from tensorflow.keras.utils import to_categorical
+
+y_train_caps_cat = to_categorical(y_train_caps, num_classes=2)
+y_val_caps_cat = to_categorical(y_val_caps, num_classes=2)
+y_test_caps_cat = to_categorical(y_test_caps, num_classes=2)
+
+print("Features and labels loaded successfully!")
+
+#Capsnet model
+import numpy as np
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras import regularizers
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+
+# ------------------------------
+# FIX: Convert labels back to binary scalars
+# ------------------------------
+
+# Load pre-extracted feature vectors and labels
+X_train_caps = np.load(r"E:\SDP\Extracted_Features\X_train_caps.npy")
+y_train_caps = np.load(r"E:\SDP\Extracted_Features\y_train_caps.npy")
+
+X_val_caps = np.load(r"E:\SDP\Extracted_Features\X_val_caps.npy")
+y_val_caps = np.load(r"E:\SDP\Extracted_Features\y_val_caps.npy")
+
+X_test_caps = np.load(r"E:\SDP\Extracted_Features\X_test_caps.npy")
+y_test_caps = np.load(r"E:\SDP\Extracted_Features\y_test_caps.npy")
+
+# Use the binary labels directly (not one-hot encoded)
+# Make sure the target labels are 0 or 1
+# No need for `to_categorical` here as we are using binary scalar values for labels
+
+# ------------------------------
+# FIX: Modify the CapsNet for Binary Classification with Scalar Labels
+# ------------------------------
+
+from tensorflow.keras.layers import Dropout  # Import Dropout
+
+def build_capsnet_feature_based(input_dim):
+    """
+    Build the CapsNet model accepting feature vectors as input.
+    Adding L2 regularization and dropout for improved generalization.
+    """
+    # Input layer for the feature vectors
+    inputs = Input(shape=(input_dim,))  # Input should match the extracted feature size (e.g., 1024)
+
+    # Fully connected layers with L2 regularization and dropout
+    x = Dense(512, activation="relu", kernel_regularizer=regularizers.l2(0.01))(inputs)
+    x = Dropout(0.3)(x)  # Dropout to prevent overfitting
+    x = Dense(128, activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = Dropout(0.3)(x)
+    x = Dense(64, activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = Dropout(0.3)(x)
+    x = Dense(32, activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = Dropout(0.3)(x)
+    
+    # Output layer with a single unit and sigmoid activation for binary classification
+    outputs = Dense(1, activation="sigmoid")(x)
+    
+    # Compile the model with a lower learning rate
+    model = Model(inputs, outputs)
+    
+    # Use binary_crossentropy loss for binary classification (with sigmoid output)
+    model.compile(optimizer=Adam(learning_rate=1e-3), loss="binary_crossentropy", metrics=["accuracy", "Precision", "Recall", "AUC"])
+    
+    return model
+
+# ------------------------------
+# STEP: TRAIN THE MODEL USING EXTRACTED FEATURES
+# ------------------------------
+
+# Build the model using the number of features in the input vector
+input_dim = X_train_caps.shape[1]  # Example: 1024 features from DenseNet
+capsnet_model = build_capsnet_feature_based(input_dim)
+
+# Early stopping and learning rate reduction callbacks
+early_stopping = EarlyStopping(monitor="val_loss", patience=5, restore_best_weights=True)
+reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.2, patience=3, min_lr=1e-6)
+
+# Fit the model
+history_capsnet = capsnet_model.fit(
+    X_train_caps,
+    y_train_caps,  # Binary labels (0 or 1), no need for one-hot encoding
+    epochs=60,
+    validation_data=(X_val_caps, y_val_caps),  # Binary labels (0 or 1), no need for one-hot encoding
+    callbacks=[early_stopping, reduce_lr]
+)
+
+# ------------------------------
+# STEP: EVALUATE THE MODEL PERFORMANCE
+# ------------------------------
+
+# Get predictions from the model
+y_test_pred = (capsnet_model.predict(X_test_caps) > 0.5).astype(int)
+
+# Evaluate the model's performance using common metrics
+def evaluate(y_true, y_pred):
+    print(f"Accuracy: {accuracy_score(y_true, y_pred):.4f}")
+    print(f"Precision: {precision_score(y_true, y_pred):.4f}")
+    print(f"Recall: {recall_score(y_true, y_pred):.4f}")
+    print(f"F1-Score: {f1_score(y_true, y_pred):.4f}")
+    print(f"ROC-AUC: {roc_auc_score(y_true, y_pred):.4f}")
+
+evaluate(y_test_caps, y_test_pred)
+
+# Save the trained model
+capsnet_model.save(r"E:\SDP\model\capsnet_feature_model.h5")
+print("Model saved successfully!")
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import pickle
+from sklearn.metrics import confusion_matrix, precision_recall_curve, classification_report
+import tensorflow as tf
+from sklearn.metrics import roc_curve, auc
+
+# Assuming 'history_capsnet' is the training history object
+
+# 1. **Training vs Validation Accuracy & Loss (Side-by-side)**
+
+plt.figure(figsize=(12,5))
+
+# Accuracy Plot
+plt.subplot(1,2,1)
+plt.plot(history_capsnet.history['accuracy'])
+plt.plot(history_capsnet.history['val_accuracy'])
+plt.title('Model Accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Validation'], loc='lower right')
+
+# Loss Plot
+plt.subplot(1,2,2)
+plt.plot(history_capsnet.history['loss'])
+plt.plot(history_capsnet.history['val_loss'])
+plt.title('Model Loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Validation'], loc='upper right')
+
+# Save and display training vs validation accuracy and loss
+accuracy_loss_plot_path = r"E:\SDP\model\training_validation_accuracy_loss1.png"
+plt.savefig(accuracy_loss_plot_path)
+plt.show()  # Display the plot
+plt.close()
+
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+
+# Get predictions from the model
+y_pred = (capsnet_model.predict(X_test_caps) > 0.5).astype(int)  # Get binary predictions
+
+# Compute the confusion matrix
+cm = confusion_matrix(y_test_caps, y_pred)
+
+# Plot the confusion matrix
+plt.figure(figsize=(6,5))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False)
+plt.title('Confusion Matrix')
+plt.xlabel('Predicted Label')
+plt.ylabel('True Label')
+
+# Save the confusion matrix plot
+plt.savefig(r"E:\SDP\model\confusion_matrix.png")
+plt.show()
+plt.close()
+
+from sklearn.metrics import precision_recall_curve
+import matplotlib.pyplot as plt
+
+# 3. **Precision-Recall Curve**
+
+# Get the true labels and predicted probabilities
+y_true = y_test_caps  # Actual labels (from test data)
+y_pred = capsnet_model.predict(X_test_caps)  # Predicted probabilities from the model
+
+# For binary classification, we use the probabilities of the positive class (1)
+precision, recall, _ = precision_recall_curve(y_true, y_pred)
+
+# Plot the Precision-Recall curve
+plt.figure(figsize=(8, 6))
+plt.plot(recall, precision, color='blue')
+plt.fill_between(recall, precision, color='blue', alpha=0.2)
+plt.title('Precision-Recall Curve')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+
+# Save the precision-recall curve
+precision_recall_curve_path = r"E:\SDP\model\precision_recall_curve.png"
+plt.savefig(precision_recall_curve_path)
+plt.show()
+plt.close()
+
+from sklearn.metrics import classification_report
+import numpy as np
+
+# 4. **Classification Report (Save as .txt)**
+
+# Get the predicted classes (binary 0 or 1)
+y_pred_classes = (y_pred > 0.5).astype(int)  # Convert probabilities to binary predictions
+
+# Generate the classification report
+report = classification_report(y_true, y_pred_classes)
+
+# Save the classification report to a text file
+classification_report_path = r"E:\SDP\model\classification_report.txt"
+with open(classification_report_path, "w") as f:
+    f.write(report)
+
+# Optionally, print the report for visualization
+print(report)
+
+from sklearn.metrics import roc_curve, auc
+import matplotlib.pyplot as plt
+
+# 5. **ROC Curve**
+
+# Compute False Positive Rate (FPR) and True Positive Rate (TPR)
+fpr, tpr, _ = roc_curve(y_true, y_pred)  # Use y_pred directly since it's a single column of probabilities
+
+# Calculate AUC (Area Under the Curve)
+roc_auc = auc(fpr, tpr)
+
+# Plot the ROC curve
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.title('Receiver Operating Characteristic (ROC) Curve')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.legend(loc="lower right")
+
+# Save the ROC curve plot
+roc_curve_path = r"E:\SDP\model\roc_curve.png"
+plt.savefig(roc_curve_path)
+plt.show()
+plt.close()
+
+# 6. **Model Architecture Summary (Save as .txt)**
+
+# Open the file in write mode to save the model summary with UTF-8 encoding
+with open(r"E:\SDP\model\capsnet_model_summary.txt", "w", encoding="utf-8") as file:
+    # Save the model summary to the file
+    capsnet_model.summary(print_fn=lambda x: file.write(x + "\n"))
+
+# Optionally, print the model summary to the console as well
+capsnet_model.summary()
+
+
+import pickle
+
+# 8. **Save Training History (Raw Logs)**
+
+history_save_path = r"E:\SDP\model\training_history.pkl"
+
+# Save the training history to a pickle file
+with open(history_save_path, "wb") as file_pi:
+    pickle.dump(history_capsnet.history, file_pi)
+
+print("Training history saved successfully!")
+
+# Load the training history from the pickle file
+with open(history_save_path, "rb") as file_pi:
+    loaded_history = pickle.load(file_pi)
+
+# Display the loaded history to confirm
+print(loaded_history)
+
+#Activation of dense layers visualization
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import Model
+
+# Select the first Dense layer for activation visualization (using 'dense_67' as the layer name)
+intermediate_layer_model = Model(inputs=capsnet_model.input,
+                                 outputs=capsnet_model.get_layer('dense_67').output)  # 'dense_67' is the correct layer name
+
+# Get the activations for a sample image (using X_test_caps)
+sample_image = X_test_caps[0].reshape(1, -1)  # Reshaping to match the input shape
+activations = intermediate_layer_model.predict(sample_image)
+
+# Visualize the activations
+plt.figure(figsize=(10, 5))
+plt.bar(range(activations.shape[1]), activations[0], color='blue')  # Plotting activations of all neurons in 'dense_67'
+plt.title('Activations of Dense Layer (dense_67)')
+plt.xlabel('Neuron Index')
+plt.ylabel('Activation Value')
+plt.grid(True)
+
+# Save the activation visualization
+plt.tight_layout()
+plt.savefig(r"E:\SDP\model\dense_67_activations.png")
+plt.show()
+plt.close()
+
+#Testing the model on data
+import numpy as np
+import os
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.densenet import DenseNet121, preprocess_input
+from tensorflow.keras.models import load_model
+
+# Load models
+capsnet_model = load_model(r"E:\SDP\model\capsnet_feature_model.h5")
+densenet_model = DenseNet121(weights="imagenet", include_top=False, pooling="avg")
+
+# Function to preprocess image
+def preprocess_image(img_path):
+    img = image.load_img(img_path, target_size=(224, 224))
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array = preprocess_input(img_array)
+    return img_array
+
+# Function to extract features
+def extract_features_from_image(img_array):
+    features = densenet_model.predict(img_array)
+    return features
+
+# Function to predict
+def predict_image(img_path):
+    img_array = preprocess_image(img_path)
+    features = extract_features_from_image(img_array)
+    
+    prediction = capsnet_model.predict(features)
+    probability = prediction[0][0]  # Get the number from (1,1) array
+    
+    threshold = 0.7
+    
+    if probability > threshold:
+        predicted_class = 0  # Tuberculosis
+        result = "No Tuberculosis Detected"
+        confidence = probability*100
+    else:
+        predicted_class = 1  # Normal
+        result = "Tuberculosis Detected"
+        confidence = (1 - probability)*100
+    
+    return result, probability, confidence
+
+# Example usage
+img_path = r"C:\Users\nagavardhan\OneDrive\Desktop\Project77777\Split data1\test1\Augmented_Tuberculosis\Tuberculosis-59_aug0.png"
+result, probability, confidence = predict_image(img_path)
+
+# Output
+print(f"Prediction Result: {result}")
+print(f"Prediction Probability (Raw Output): {probability:.4f}")
+print(f"Prediction Confidence: {confidence:.4f}%")
+
+import numpy as np
+import os
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.densenet import DenseNet121, preprocess_input
+from tensorflow.keras.models import load_model
+
+# Load models
+capsnet_model = load_model(r"E:\SDP\model\capsnet_feature_model.h5")
+densenet_model = DenseNet121(weights="imagenet", include_top=False, pooling="avg")
+
+# Function to preprocess image
+def preprocess_image(img_path):
+    img = image.load_img(img_path, target_size=(224, 224))
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array = preprocess_input(img_array)
+    return img_array
+
+# Function to extract features
+def extract_features_from_image(img_array):
+    features = densenet_model.predict(img_array)
+    return features
+
+# Function to predict
+def predict_image(img_path):
+    img_array = preprocess_image(img_path)
+    features = extract_features_from_image(img_array)
+    
+    prediction = capsnet_model.predict(features)
+    probability = prediction[0][0]  # Get the number from (1,1) array
+    
+    threshold = 0.7
+    
+    if probability > threshold:
+        predicted_class = 0  # Tuberculosis should be 1 and tuberculosis, but here 0 is tuberculosis.
+        result = "No Tuberculosis Detected"
+        confidence = probability*100
+    else:
+        predicted_class = 1  # Normal should be 0 and normal, but here 1 is normal.
+        result = "Tuberculosis Detected"
+        confidence = (1 - probability)*100
+    
+    return result, probability, confidence
+
+# Example usage
+img_path = r"C:\Users\nagavardhan\OneDrive\Desktop\Project77777\Split data1\test1\Normal\Normal-87.png"
+result, probability, confidence = predict_image(img_path)
+
+# Output
+print(f"Prediction Result: {result}")
+print(f"Prediction Probability (Raw Output): {probability:.4f}")
+print(f"Prediction Confidence: {confidence:.4f}%")
+
+

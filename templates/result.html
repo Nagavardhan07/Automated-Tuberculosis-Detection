@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="initial-scale=1, width=device-width" />
+  <link rel="stylesheet" type="text/css" href="static/css/2/global.css" />
+  <link rel="stylesheet" type="text/css" href="static/css/2/result.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
+  <title>TB Detection Result</title>
+</head>
+
+<body>
+  <div class="result">
+    <canvas id="nokey"></canvas>
+    <div class="mainbox">
+      <!-- Background Animations -->
+      <div class="ripple1"><div class="dot1"></div></div>
+      <div class="ripple2"><div class="dot2"></div></div>
+      <div class="ripple3"><div class="dot3"></div></div>
+      <div class="ripple4"><div class="dot4"></div></div>
+
+      <img class="lungsimage-icon" alt="lungs" src="static/img/lungsimage.svg" />
+
+      <!-- Interpretation Box -->
+      <div class="interpretationbox">
+        <img class="interpretationbox-child" alt="" src="static/img/vector-4.svg" />
+        <div class="interpretation">
+          <div class="interpretation-child"></div>
+          <div class="interpretation-item"></div>
+          <div class="interpretation1">Interpretation</div>
+          <img class="frame-icon" alt="" src="static/img/frame.svg" />
+          <div class="interpretation-inner">
+            {% if prediction %}
+              <p style="margin-left:15px"><br/>
+                {% if prediction == "TB Positive" %}
+                  <span class="positive">Indication of TB Positive</span>
+                {% else %}
+                  <span class="negative">Indication of TB Negative</span>
+                {% endif %}
+              </p>
+            {% else %}
+              <p>No Prediction Available</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Lung Involvement Box -->
+      <div class="involvementbox">
+        <img class="involvementbox-child" alt="" src="static/img/vector-6.svg" />
+        <div class="involvement">
+          <div class="involvement-child"></div>
+          <div class="involvement-item"></div>
+          <div class="lung-involvement">
+            <p class="lung">Confidence</p>
+            <p class="lung">Score</p>
+          </div>
+          <img class="vector-icon" alt="" src="static/img/vector.svg" />
+          <div class="involvement-inner">
+            {% if prediction %}
+              <p style="margin-left:20px"><br/>
+                <span>
+                  Confidence: {{ confidence }}%
+                </span>
+              </p>
+            {% else %}
+              <p>No Data</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <!-- Cavity Box -->
+      <div class="cavitybox">
+        <img class="cavitybox-child" alt="" src="static/img/vector-5.svg" />
+        <div class="cavity">
+          <div class="cavity-child"></div>
+          <div class="cavity-item"></div>
+          <div class="cavity1">Cavity</div>
+          <img class="frame-icon1" alt="" src="static/img/frame1.svg" />
+          <div class="cavity-inner">
+            {% if prediction %}
+              <p style="margin-left:20px"><br/>
+                {% if prediction == "TB Positive" %}
+                  <span class="positive">No AI Data</span>
+                {% else %}
+                  <span class="negative">Cavity: No</span>
+                {% endif %}
+              </p>
+            {% else %}
+              <p>No Data</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Zones Box -->
+      <div class="zonesbox">
+        <div class="zones">
+          <div class="zones-child"></div>
+          <div class="zones-item"></div>
+          <div class="number-of-zones">Number of Zones</div>
+          <div class="zones-inner">
+            {% if prediction %}
+              <p style="margin-left:20px"><br/>
+                {% if prediction == "TB Positive" %}
+                  <span class="positive">No AI Data</span>
+                {% else %}
+                  <span class="negative">No Zones Involved</span>
+                {% endif %}
+              </p>
+            {% else %}
+              <p>No Data</p>
+            {% endif %}
+          </div>
+        </div>
+        <img class="vector-icon1" alt="" src="static/img/vector1.svg" />
+        <img class="zonesbox-child" alt="" src="static/img/vector-8.svg" />
+      </div>
+
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="this-ai-analysis-container">
+      <p class="this-ai-analysis">
+        This AI analysis is for informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment.
+      </p>
+      <p class="lung">
+        Always consult with a qualified healthcare provider or radiologist for accurate interpretation of medical imaging results and necessary follow-up.
+      </p>
+    </div>
+
+    <!-- Head Title -->
+    <div class="headtitle">
+      <h1 class="headline">
+        <p class="lung">Tuberculosis</p>
+        <p class="lung"><span>Detection </span><span class="ai">AI</span></p>
+      </h1>
+      <img class="headtitle-child" alt="" src="static/img/vector-9.svg" />
+    </div>
+
+    <!-- Restart Button -->
+    <a href="/" class="button">
+      <div class="button-child"></div>
+      <div class="reset">RESTART</div>
+    </a>
+  </div>
+
+<script src="static/js/bg.js"></script>
+</body>
+</html>
